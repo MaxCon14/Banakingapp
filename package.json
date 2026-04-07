@@ -1,10 +1,9 @@
 {
-  "name": "vault-api",
+  "name": "vault",
   "version": "1.0.0",
-  "description": "Vault personal savings API",
   "scripts": {
-    "start": "node vault/server/index.js",
-    "build": "cd vault/server && npm install"
+    "build": "cd vault/client && npm install && npm run build",
+    "start": "node vault/server/index.js"
   },
   "engines": {
     "node": ">=18.0.0"

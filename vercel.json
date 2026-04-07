@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd vault/client && npm install && npm run build",
+  "outputDirectory": "vault/client/dist",
+  "installCommand": "echo skip",
+  "framework": null
+}
