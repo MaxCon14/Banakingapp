@@ -5,4 +5,4 @@ nixPkgs = ["nodejs_20"]
 cmds = ["cd vault/server && npm install"]
 
 [start]
-cmd = "node vault/server/index.js"
+cmd = "cd vault/server && node index.js"

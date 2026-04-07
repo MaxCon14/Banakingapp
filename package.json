@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "cd vault/client && npm install && npm run build",
-    "start": "node vault/server/index.js"
+    "start": "cd vault/server && node index.js"
   },
   "engines": {
     "node": ">=18.0.0"
