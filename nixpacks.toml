@@ -1,8 +1,5 @@
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
-[phases.install]
-cmds = ["cd vault/server && npm install"]
-
 [start]
 cmd = "cd vault/server && node index.js"

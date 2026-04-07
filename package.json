@@ -2,8 +2,9 @@
   "name": "vault",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd vault/client && npm install && npm run build",
-    "start": "cd vault/server && node index.js"
+    "postinstall": "cd vault/server && npm install",
+    "start": "cd vault/server && node index.js",
+    "build": "cd vault/client && npm install && npm run build"
   },
   "engines": {
     "node": ">=18.0.0"
