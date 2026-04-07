@@ -11,11 +11,7 @@ const potsRoutes        = require('./routes/pots')
 const app = express()
 
 // CORS
-app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+app.use(cors())
 
 // Stripe webhook MUST receive raw body — mount before express.json()
 app.use('/api/deposit/confirm', depositRoutes)
