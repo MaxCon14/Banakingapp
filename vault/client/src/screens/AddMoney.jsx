@@ -50,11 +50,12 @@ const STRIPE_APPEARANCE = {
 }
 
 // ── Inner checkout form (needs Stripe context) ────────────────────────────
-function CheckoutForm({ amount, onSuccess, onCancel }) {
+function CheckoutForm({ amount, clientSecret, onSuccess, onCancel }) {
   const stripe   = useStripe()
   const elements = useElements()
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
+  const [status, setStatus]   = useState('')
 
   const handlePay = async (e) => {
     e.preventDefault()
@@ -62,8 +63,9 @@ function CheckoutForm({ amount, onSuccess, onCancel }) {
 
     setLoading(true)
     setError('')
+    setStatus('Processing payment…')
 
-    const { error: stripeErr } = await stripe.confirmPayment({
+    const { error: stripeErr, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: { return_url: window.location.origin },
       redirect: 'if_required',
@@ -71,8 +73,20 @@ function CheckoutForm({ amount, onSuccess, onCancel }) {
 
     if (stripeErr) {
       setError(stripeErr.message || 'Payment failed.')
+      setStatus('')
       setLoading(false)
-    } else {
+      return
+    }
+
+    // Payment succeeded on Stripe — now verify with our server to credit balance
+    setStatus('Confirming deposit…')
+    try {
+      await api.post('/deposit/verify', { paymentIntentId: paymentIntent.id })
+      onSuccess()
+    } catch (verifyErr) {
+      // Payment went through but server verify failed — still show success,
+      // balance will reconcile on next refresh
+      console.error('Verify error:', verifyErr.message)
       onSuccess()
     }
   }
@@ -104,7 +118,7 @@ function CheckoutForm({ amount, onSuccess, onCancel }) {
       </div>
 
       <button type="submit" className="btn btn-primary" disabled={loading || !stripe}>
-        {loading ? 'Processing…' : `Pay ${formatCurrency(amount)}`}
+        {loading ? (status || 'Processing…') : `Pay ${formatCurrency(amount)}`}
       </button>
       <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={loading}>
         Cancel
@@ -235,6 +249,7 @@ export default function AddMoney() {
         >
           <CheckoutForm
             amount={parsedAmount}
+            clientSecret={clientSecret}
             onSuccess={handleSuccess}
             onCancel={() => setStep('amount')}
           />

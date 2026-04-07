@@ -94,4 +94,61 @@ router.post('/confirm', express.raw({ type: 'application/json' }), async (req, r
   res.json({ received: true })
 })
 
+// POST /api/deposit/verify
+// Called by the frontend after Stripe.js confirms payment succeeded.
+// Checks the PaymentIntent status directly with Stripe, then credits balance.
+router.post('/verify', async (req, res) => {
+  const { paymentIntentId } = req.body
+
+  if (!paymentIntentId) {
+    return res.status(400).json({ error: 'paymentIntentId is required.' })
+  }
+
+  try {
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+
+    if (pi.status !== 'succeeded') {
+      return res.status(400).json({ error: `Payment not succeeded. Status: ${pi.status}` })
+    }
+
+    // Check if already processed (idempotency)
+    const existing = await db.query(
+      `SELECT id FROM transactions WHERE stripe_payment_intent_id = $1 AND status = 'completed'`,
+      [pi.id]
+    )
+    if (existing.rows.length > 0) {
+      const account = await db.query('SELECT balance FROM accounts WHERE id = 1')
+      return res.json({ already_processed: true, balance: parseFloat(account.rows[0].balance) })
+    }
+
+    const client = await db.pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      await client.query(
+        `UPDATE transactions SET status = 'completed' WHERE stripe_payment_intent_id = $1 AND status = 'pending'`,
+        [pi.id]
+      )
+
+      await client.query(
+        'UPDATE accounts SET balance = balance + $1 WHERE id = 1',
+        [pi.amount / 100]
+      )
+
+      await client.query('COMMIT')
+    } catch (dbErr) {
+      await client.query('ROLLBACK')
+      throw dbErr
+    } finally {
+      client.release()
+    }
+
+    const account = await db.query('SELECT balance FROM accounts WHERE id = 1')
+    res.json({ success: true, balance: parseFloat(account.rows[0].balance) })
+  } catch (err) {
+    console.error('POST /deposit/verify error:', err)
+    res.status(500).json({ error: err.message || 'Verification failed.' })
+  }
+})
+
 module.exports = router
